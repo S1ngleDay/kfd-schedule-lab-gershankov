@@ -13,22 +13,60 @@ object StudentCommandHandlers : CommandHandlers {
 }
 
 fun runPeriod(command: Command.Period): Int {
-    // TODO: parse every line of command.file, filter by command.from..command.to,
-    // print the selected sessions and Total, return 0 or 1.
-    println("Not implemented: period")
-    return 2
+    var selected = 0L
+    var hasErrors = false
+
+    forEachScheduleLine(command.file) { number, line ->
+        when (val result = parseSessionLine(number, line)) {
+            is ParseResult.Success -> {
+                val session = result.session
+                if (session.date >= command.from && session.date <= command.to) {
+                    println(formatSession(session, includeTeachers = false))
+                    selected++
+                }
+            }
+            is ParseResult.Rejected -> hasErrors = true
+        }
+    }
+
+    println("Total: $selected")
+    return if (hasErrors) 1 else 0
 }
 
 fun runType(command: Command.ByType): Int {
-    // TODO: parse every line of command.file, filter by command.type,
-    // print the selected sessions with teachers and Total, return 0 or 1.
-    println("Not implemented: type")
-    return 2
+    var selected = 0L
+    var hasErrors = false
+
+    forEachScheduleLine(command.file) { number, line ->
+        when (val result = parseSessionLine(number, line)) {
+            is ParseResult.Success -> {
+                val session = result.session
+                if (sessionType(session) == command.type) {
+                    println(formatSession(session, includeTeachers = true))
+                    selected++
+                }
+            }
+            is ParseResult.Rejected -> hasErrors = true
+        }
+    }
+
+    println("Total: $selected")
+    return if (hasErrors) 1 else 0
 }
 
 fun runErrors(command: Command.Errors): Int {
-    // TODO: parse every line of command.file, print formatted rejections
-    // and Rejected: K of M, return 0 or 1.
-    println("Not implemented: errors")
-    return 2
+    var total = 0L
+    var rejected = 0L
+    forEachScheduleLine(command.file) { number, line ->
+        total++
+        when (val result = parseSessionLine(number, line)) {
+            is ParseResult.Success -> Unit
+            is ParseResult.Rejected -> {
+                rejected++
+                println(formatRejection(result))
+            }
+        }
+    }
+    println("Rejected: $rejected of $total")
+    return if (rejected == 0L) 0 else 1
 }
